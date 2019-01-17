@@ -196,7 +196,19 @@ Insert into repondre(rep_ann_id,rep_util_id,rep_date, REP_statut, REP_message,RE
 
 -- creation des fonctions
 
-CREATE OR REPLACE FUNCTION acceptation_reponse(v_user integer, v_annonce integer) RETURNS integer as $$
+-- FUNCTION: public.acceptation_reponse(integer, integer)
+
+-- DROP FUNCTION public.acceptation_reponse(integer, integer);
+
+CREATE OR REPLACE FUNCTION public.acceptation_reponse(
+	v_user integer,
+	v_annonce integer)
+    RETURNS integer
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE 
+AS $BODY$
+
 DECLARE
 	v_reponseRecord RECORD;
     v_annonceRecord RECORD;
@@ -224,17 +236,23 @@ BEGIN
 	-- On récupère l'annonce associée
     SELECT INTO v_annonceRecord * FROM annonce WHERE ann_id = v_annonce;
    	 
-    IF v_annonceRecord.nbrplacesdisponibles > 0 THEN
-   	 UPDATE annonce ann SET ann.nbrplacesdisponibles = v_annonceRecord.nbrplacesdisponibles - 1 WHERE ann.ann_id = v_annonceRecord.ann_id;
-   	 UPDATE repondre rep SET rep.rep_statut = 'Acceptée' WHERE rep.rep_ann_id = v_annonce AND rep.rep_util_id = v_user;
+    IF v_annonceRecord.ann_nbrplacesdisponibles > 0 THEN
+   	 UPDATE annonce ann SET ann_nbrplacesdisponibles = v_annonceRecord.ann_nbrplacesdisponibles - 1 WHERE ann.ann_id = v_annonceRecord.ann_id;
+   	 UPDATE repondre rep SET rep_statut = 'acceptée' WHERE rep_ann_id = v_annonce AND rep_util_id = v_user;
     ELSE
-   	 UPDATE repondre rep SET rep.rep_statut = 'En attente' WHERE rep.rep_ann_id = v_annonce AND rep.rep_util_id = v_user;
+   	 UPDATE repondre rep SET rep_statut = 'en attente' WHERE rep_ann_id = v_annonce AND rep_util_id = v_user;
     END IF;
     
     RETURN 0;
     
     END;
-$$ LANGUAGE plpgsql;
+
+$BODY$;
+
+ALTER FUNCTION public.acceptation_reponse(integer, integer)
+    OWNER TO postgres;
+
+
 
 
 CREATE OR REPLACE FUNCTION public.notifier_tout_inscrit(ann_id integer)
