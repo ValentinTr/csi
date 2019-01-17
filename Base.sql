@@ -500,31 +500,41 @@ ALTER FUNCTION public.connect_user(text, text)
 
 
 
-CREATE OR REPLACE FUNCTION public.connect_user(
-	v_login text,
-	v_motdepasse text)
-    RETURNS integer
+-- FUNCTION: public.create_user(character, character, character, character, character, integer, integer)
+
+-- DROP FUNCTION public.create_user(character, character, character, character, character, integer, integer);
+
+CREATE OR REPLACE FUNCTION public.create_user(
+	v_login character,
+	v_motdepasse character,
+	v_nom character,
+	v_prenom character,
+	v_mail character,
+	v_idpromo integer,
+	v_idfiliere integer)
+    RETURNS void
     LANGUAGE 'plpgsql'
     COST 100
     VOLATILE 
 AS $BODY$
 
     DECLARE
-		
 		v_idcpt integer;
 		v_iduser integer;
     BEGIN
-		v_idcpt := (Select cpt_id from compte where cpt_login = v_login and cpt_motdepasse = v_motdepasse );
-		If (v_idcpt IS NULL) then
-			RAISE EXCEPTION 'Mauvaise combinaison login/mot de passe' ;
-		else
-			v_iduser := (Select util_id from utilisateur where util_cpt_id = v_idcpt);
-			If ( v_iduser IS NULL) then
-				Raise Exception 'Utilisateur non existant';
-			else 
-				RETURN v_idsuer;
-			END IF;
+		v_idcpt := (SELECT cpt_id FROM compte WHERE compte.cpt_login = v_login);
+		IF ( v_idcpt IS NOT NULL) THEN
+			RAISE EXCEPTION 'Compte déjà existant';
 		END IF;
+		Insert into compte (cpt_login, cpt_motdepasse) values (v_login,v_motdepasse);
+		v_idcpt := (SELECT cpt_id FROM compte WHERE compte.cpt_login = v_login);
+		
+		Insert Into utilisateur (util_nom,util_prenom,util_mail,util_cpt_id,util_rol_id,util_fil_id,util_pro_id) values (v_nom,v_prenom,v_mail,v_idcpt,2,v_idfiliere,v_idpromo);
+		v_iduser := (SELECT util_id FROM utilisateur WHERE utilisateur.util_cpt_id = v_idcpt);
+		IF ( v_iduser IS NULL) THEN
+			RAISE EXCEPTION 'Probleme enregistrement compte';
+		END IF;
+		
 		
     END;
 
@@ -532,6 +542,8 @@ $BODY$;
 
 ALTER FUNCTION public.create_user(character, character, character, character, character, integer, integer)
     OWNER TO postgres;
+
+
 
 
 
@@ -567,35 +579,6 @@ $BODY$;
 
 
 
-
-CREATE OR REPLACE FUNCTION public.create_user(v_login character, v_motdepasse character, v_nom character, v_prenom character,v_mail character , v_idpromo integer, v_idfiliere integer )
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE 
-AS $BODY$
-
-    DECLARE
-		v_idcpt integer;
-		v_iduser integer;
-    BEGIN
-		v_idcpt := (SELECT cpt_id FROM compte WHERE compte.cpt_login = v_login);
-		IF ( v_idcpt IS NULL) THEN
-			RAISE EXCEPTION 'Compte déjà existant';
-		END IF;
-		Insert into compte (cpt_login, cpt_motdepasse) values (v_login,v_motdepasse);
-		v_idcpt := (SELECT cpt_id FROM compte WHERE compte.cpt_login = v_login);
-		
-		Insert Into utilisateur (util_nom,util_prenom,util_mail,util_cpt_id,util_rol_id,util_fil_id,util_pro_id) values (v_nom,v_prenom,v_mail,v_idcpt,2,v_idfiliere,v_idpromo);
-		v_iduser := (SELECT util_id FROM utilisateur WHERE utilisateur.util_login = v_iduser);
-		IF ( v_iduser IS NULL) THEN
-			RAISE EXCEPTION 'Probleme enregistrement compte';
-		END IF;
-		
-		
-    END;
-
-$BODY$;
 
 
 
