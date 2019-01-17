@@ -24,7 +24,7 @@ CREATE TYPE lib AS ENUM ('MIAGE', 'SC', 'TAL', 'MIASHS');
 CREATE TYPE promo AS ENUM ('L1', 'L2', 'L3', 'M1', 'M2');
 CREATE TYPE enum_role AS ENUM('Utilisateur' , 'Administrateur');
 CREATE TYPE repet AS ENUM('Aucune' , 'Jour' , 'Semaine' , 'Mois');
-CREATE TYPE etat AS ENUM('Annulée' , 'Terminée' , 'En cours');
+CREATE TYPE etat AS ENUM('Annulée' , 'etat_annonce_termineminée' , 'En cours');
 CREATE TYPE statut AS ENUM('non traitée' , 'en attente' , 'acceptée' , 'refusée');
 
 
@@ -810,6 +810,38 @@ $$ LANGUAGE plpgsql;
 
 
 
+CREATE OR REPLACE FUNCTION public.annuler_inscription(
+  iduser integer,
+  idannonce integer)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE 
+AS $BODY$
+
+DECLARE
+    v_titre text;
+  v_description text;
+  annonce_cible record;
+BEGIN
+  IF ( (Select rep_ann_id from repondre where rep_ann_id = idannonce and rep_util_id = iduser) IS NULL )THEN
+    Raise exception 'Inscription introuvable';
+  End if;
+  Select into annonce_cible * from annonce where annonce.ann_id = idannonce;
+  v_titre := 'Annulation d''inscription a une annonce';
+  v_description := 'Votre inscription à l''annonce ' || annonce_cible.ann_titre || ' est annulée.';
+  INSERT INTO notification(not_util_id,not_titre,not_message)
+    VALUES(iduser,v_titre,v_description);
+    
+  DELETE FROM repondre
+  where repondre.rep_util_id = iduser and repondre.rep_ann_id = idannonce; 
+END;
+
+$BODY$;
+
+
+
+
 -- Ajout des triggers
 
 CREATE TRIGGER etat_annonce_annule
@@ -824,3 +856,4 @@ CREATE TRIGGER etat_annonce_annule
   FOR EACH ROW
   When (new.ann_etat = 'Terminée')
   Execute procedure repeat_annonce();
+
