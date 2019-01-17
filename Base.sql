@@ -255,47 +255,55 @@ ALTER FUNCTION public.acceptation_reponse(integer, integer)
 
 
 
-CREATE OR REPLACE FUNCTION public.notifier_tout_inscrit(ann_id integer)
-    RETURNS void
+-- FUNCTION: public.notifier_tout_inscrit()
+
+-- DROP FUNCTION public.notifier_tout_inscrit();
+
+CREATE FUNCTION public.notifier_tout_inscrit()
+    RETURNS trigger
     LANGUAGE 'plpgsql'
     COST 100
-    VOLATILE 
+    VOLATILE NOT LEAKPROOF 
 AS $BODY$
 
     DECLARE
-	inscrits record;
-	v_titre text;
-	v_contenu text;
+  inscrits record;
+  v_titre text;
+  v_contenu text;
+  ann_id integer;
     BEGIN
-		FOR inscrits IN (Select * from repondre where repondre.rep_ann_id= ann_id)
-	LOOP
-		v_titre := 'Suppression de l’annonce ' || ANN_id ;
-		v_contenu := ' L’annonce à été supprimé par le propriétaire ' ;
-	
-		INSERT INTO notification(not_id,not_titre,not_message)
-		VALUES(inscrits.rep_util_id,v_titre,v_contenu);
-		
-		
-		
-		
-	END LOOP;
-	
-	DELETE FROM repondre
-	WHERE repondre.rep_ann_id = ann_id;
-	
-	DELETE FROM annonce
-	WHERE annonce.ann_id = ann_id;
-	
-	DELETE FROM commentaire
-	WHERE commentaire.com_ann_id = ann_id;
-        	
+    ann_id := NEW.ann_id;
+    FOR inscrits IN (Select * from repondre where repondre.rep_ann_id= ann_id)
+  LOOP
+    v_titre := 'Suppression de l’annonce ' || ANN_id ;
+    v_contenu := ' L’annonce à été supprimé par le propriétaire ' ;
+  
+    INSERT INTO notification(not_id,not_titre,not_message)
+    VALUES(inscrits.rep_util_id,v_titre,v_contenu);
+    
+    
+    
+    
+  END LOOP;
+  
+  DELETE FROM repondre
+  WHERE repondre.rep_ann_id = ann_id;
+  
+  DELETE FROM annonce
+  WHERE annonce.ann_id = ann_id;
+  
+  DELETE FROM commentaire
+  WHERE commentaire.com_ann_id = ann_id;
+    
+  Return null;
     END;
-
 
 $BODY$;
 
-ALTER FUNCTION public.notifier_tout_inscrit(integer)
+ALTER FUNCTION public.notifier_tout_inscrit()
     OWNER TO postgres;
+
+
 
 
 
@@ -712,18 +720,29 @@ END;
 
 $$ LANGUAGE plpgsql;
 
- CREATE OR REPLACE FUNCTION repeat_annonce(idAnnonce integer) RETURNS void as $$
+-- FUNCTION: public.repeat_annonce()
+
+-- DROP FUNCTION public.repeat_annonce();
+
+CREATE FUNCTION public.repeat_annonce()
+    RETURNS trigger
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE NOT LEAKPROOF 
+AS $BODY$
+
 DECLARE
-	resAnnonce RECORD;
-	nouvDateDebut TIMESTAMP;
-	nouvDateFin TIMESTAMP;
-	nouvDateLimRep TIMESTAMP;
+  idannonce integer;
+  resAnnonce RECORD;
+  nouvDateDebut TIMESTAMP;
+  nouvDateFin TIMESTAMP;
+  nouvDateLimRep TIMESTAMP;
     intervalDebutFin INTERVAL;
     intervalDebutLimiteRep INTERVAL;
     heureMinuteDebut TIME;
 BEGIN
-    
-	SELECT INTO resAnnonce * FROM annonce ann WHERE ann_id=idAnnonce;
+    idannonce := NEW.ann_id;
+  SELECT INTO resAnnonce * FROM annonce  WHERE ann_id=idAnnonce;
     
     -- calcul des intervals entre le début et la fin de l'annonce / le début et la date limite de réponse
     intervalDebutFin := resAnnonce.ann_datefin - resAnnonce.ann_datedebut;
@@ -734,40 +753,43 @@ BEGIN
     
 
     IF resAnnonce.ann_repetition='Jour' THEN
-   	 -- on récupère la date de fin sans l'heure et la minute et on y ajoute un jour pour avoir la nouvelle date de début en mettant les heures et minute de début à 0
-    	nouvDateDebut := date_trunc('day', resAnnonce.ann_datefin) + interval '1 day';
-   	 -- on ajoute les heures et minutes de début de l'annonce précédente
-   	 nouvDateDebut := nouvDateDebut + heureMinuteDebut;
-   	 
-    	nouvDateFin := nouvDateDebut + intervalDebutFin;
-    	nouvDateLimRep := nouvDateDebut + intervalDebutLimiteRep;
-	ELSIF resAnnonce.ann_repetition='Semaine' THEN
-   	 -- on récupère la date de fin sans l'heure et la minute et on y ajoute un jour pour avoir la nouvelle date de début en mettant les heures et minute de début à 0
-    	nouvDateDebut := date_trunc('day', resAnnonce.ann_datefin) + interval '1 week';
-   	 -- on ajoute les heures et minutes de début de l'annonce précédente
-   	 nouvDateDebut := nouvDateDebut + heureMinuteDebut;
-   	 
-    	nouvDateFin := nouvDateDebut + intervalDebutFin;
-    	nouvDateLimRep := nouvDateDebut + intervalDebutLimiteRep;
-   	 
-	ELSIF resAnnonce.ann_repetition='Mois' THEN
-   	 -- on récupère la date de fin sans l'heure et la minute et on y ajoute un jour pour avoir la nouvelle date de début en mettant les heures et minute de début à 0
-    	nouvDateDebut := date_trunc('day', resAnnonce.ann_datefin) + interval '1 month';
-   	 -- on ajoute les heures et minutes de début de l'annonce précédente
-   	 nouvDateDebut := nouvDateDebut + heureMinuteDebut;
-   	 
-    	nouvDateFin := nouvDateDebut + intervalDebutFin;
-    	nouvDateLimRep := nouvDateDebut + intervalDebutLimiteRep;
-	END IF;
+     -- on récupère la date de fin sans l'heure et la minute et on y ajoute un jour pour avoir la nouvelle date de début en mettant les heures et minute de début à 0
+      nouvDateDebut := date_trunc('day', resAnnonce.ann_datefin) + interval '1 day';
+     -- on ajoute les heures et minutes de début de l'annonce précédente
+     nouvDateDebut := nouvDateDebut + heureMinuteDebut;
+     
+      nouvDateFin := nouvDateDebut + intervalDebutFin;
+      nouvDateLimRep := nouvDateDebut + intervalDebutLimiteRep;
+  ELSIF resAnnonce.ann_repetition='Semaine' THEN
+     -- on récupère la date de fin sans l'heure et la minute et on y ajoute un jour pour avoir la nouvelle date de début en mettant les heures et minute de début à 0
+      nouvDateDebut := date_trunc('day', resAnnonce.ann_datefin) + interval '1 week';
+     -- on ajoute les heures et minutes de début de l'annonce précédente
+     nouvDateDebut := nouvDateDebut + heureMinuteDebut;
+     
+      nouvDateFin := nouvDateDebut + intervalDebutFin;
+      nouvDateLimRep := nouvDateDebut + intervalDebutLimiteRep;
+     
+  ELSIF resAnnonce.ann_repetition='Mois' THEN
+     -- on récupère la date de fin sans l'heure et la minute et on y ajoute un jour pour avoir la nouvelle date de début en mettant les heures et minute de début à 0
+      nouvDateDebut := date_trunc('day', resAnnonce.ann_datefin) + interval '1 month';
+     -- on ajoute les heures et minutes de début de l'annonce précédente
+     nouvDateDebut := nouvDateDebut + heureMinuteDebut;
+     
+      nouvDateFin := nouvDateDebut + intervalDebutFin;
+      nouvDateLimRep := nouvDateDebut + intervalDebutLimiteRep;
+  END IF;
 
-
-   INSERT INTO annonce (ann_description, ann_datedebut, ann_datefin, ann_datelimite, ann_nbrmaxpersonnes, ann_nbrplacesdisponibles, ann_visiblepublic, ann_repetition, ann_etat, ann_util_id, ann_cat_id, ann_pro_id)
-	VALUES (resAnnonce.ann_description, nouvDateDebut, nouvDateFin, nouvDateLimRep, resAnnonce.ann_nbrmaxpersonnes, resAnnonce.ann_nbrplacesdisponibles, resAnnonce.ann_visiblepublic, resAnnonce.ann_repetition, resAnnonce.ann_etat, resAnnonce.ann_util_id, resAnnonce.ann_cat_id, resAnnonce.ann_pro_id);
-
-
+   INSERT INTO annonce (ann_titre,ann_description, ann_datedebut, ann_datefin, ann_datelimitereponse, ann_nbrmaxpersonnes, ann_nbrplacesdisponibles, ann_visiblepublic, ann_repetition, ann_etat, ann_util_id, ann_cat_id, ann_pro_id)
+  VALUES (resAnnonce.ann_titre,resAnnonce.ann_description, nouvDateDebut, nouvDateFin, nouvDateLimRep, resAnnonce.ann_nbrmaxpersonnes, resAnnonce.ann_nbrplacesdisponibles, resAnnonce.ann_visiblepublic, resAnnonce.ann_repetition, resAnnonce.ann_etat, resAnnonce.ann_util_id, resAnnonce.ann_cat_id, resAnnonce.ann_pro_id);
+  Return null;
 END;
 
-$$ LANGUAGE plpgsql;
+$BODY$;
+
+ALTER FUNCTION public.repeat_annonce()
+    OWNER TO postgres;
+
+
 
 
  CREATE OR REPLACE FUNCTION inscription_annonce(idUser integer, idAnnonce integer, mess character, alerte boolean) RETURNS void as $$
@@ -788,28 +810,17 @@ $$ LANGUAGE plpgsql;
 
 
 
+-- Ajout des triggers
+
+CREATE TRIGGER etat_annonce_annule
+  AFTER UPDATE on annonce
+  FOR EACH ROW
+  When (new.ann_etat = 'Annulée')
+  Execute procedure notifier_tout_inscrit();
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  CREATE TRIGGER etat_annonce_termine
+  AFTER UPDATE on annonce
+  FOR EACH ROW
+  When (new.ann_etat = 'Terminée')
+  Execute procedure repeat_annonce();
