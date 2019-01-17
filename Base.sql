@@ -490,6 +490,40 @@ AS $BODY$
 
 $BODY$;
 
+CREATE OR REPLACE FUNCTION public.connect_user(
+	v_login text,
+	v_motdepasse text)
+    RETURNS integer
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE 
+AS $BODY$
+
+    DECLARE
+		
+		v_idcpt integer;
+		v_iduser integer;
+    BEGIN
+		v_idcpt := (Select cpt_id from compte where cpt_login = v_login and cpt_motdepasse = v_motdepasse );
+		If (v_idcpt IS NULL) then
+			RAISE EXCEPTION 'Mauvaise combinaison login/mot de passe' ;
+		else
+			v_iduser := (Select util_id from utilisateur where util_cpt_id = v_idcpt);
+			If ( v_iduser IS NULL) then
+				Raise Exception 'Utilisateur non existant';
+			else 
+				RETURN v_idsuer;
+			END IF;
+		END IF;
+		
+    END;
+
+$BODY$;
+
+ALTER FUNCTION public.create_user(character, character, character, character, character, integer, integer)
+    OWNER TO postgres;
+
+
 
 
 CREATE OR REPLACE FUNCTION public.create_categorie(libelle character)
