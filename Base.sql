@@ -839,7 +839,34 @@ END;
 
 $BODY$;
 
+CREATE OR REPLACE FUNCTION public.refuser_inscription(
+  iduser integer,
+  idannonce integer)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE 
+AS $BODY$
 
+DECLARE
+    v_titre text;
+  v_description text;
+  annonce_cible record;
+BEGIN
+  IF ( (Select rep_ann_id from repondre where rep_ann_id = idannonce and rep_util_id = iduser) IS NULL )THEN
+    Raise exception 'Inscription introuvable';
+  End if;
+  Select into annonce_cible * from annonce where annonce.ann_id = idannonce;
+  v_titre := 'Inscription refusé;
+  v_description := 'Votre inscription à l''annonce ' || annonce_cible.ann_titre || ' est refusée.';
+  INSERT INTO notification(not_util_id,not_titre,not_message)
+    VALUES(iduser,v_titre,v_description);
+    
+  DELETE FROM repondre
+  where repondre.rep_util_id = iduser and repondre.rep_ann_id = idannonce; 
+END;
+
+$BODY$;
 
 
 -- Ajout des triggers
