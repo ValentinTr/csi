@@ -994,10 +994,63 @@ AS $BODY$
 $BODY$;
 
 
---****************************************************************************************
+--*********************************************************************
+--******************************archivage******************************
+--*********************************************************************
 
+
+CREATE OR REPLACE FUNCTION public.archivage()
+    RETURNS trigger
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE 
+AS $BODY$
+
+    DECLARE
+    v_idAnnonce integer;
+    inscrits record;
+    v_titre text;
+    v_contenu text;
+    BEGIN
+    v_idAnnonce := NEW.ann_id;
+    FOR inscrits IN (Select * from repondre,annonce where repondre.rep_ann_id = annonce.ann_id and annonce.ann_id = v_idAnnonce)
+  LOOP
+  
+    If (inscrits.rep_statut = 'acceptée') then
+      v_titre := 'Annonce terminée ' ;
+      v_contenu := ' L''annonce : ' || inscrits.ann_titre || ' est terminée' ;
+      INSERT INTO notification(not_titre,not_message,not_util_id)
+      VALUES(v_titre,v_contenu,inscrits.rep_util_id);
+    
+      insert into archive_repondre(idannonce,idutilisateur,message,datereponse)
+      values(v_idAnnonce,inscrits.rep_util_id,inscrits.rep_message,inscrits.rep_date);
+    End if; 
+      DELETE FROM public.repondre
+      WHERE repondre.rep_ann_id = v_idAnnonce;
+    
+  END LOOP;
+  v_titre := 'Annonce terminée ' ;
+  v_contenu := ' L''annonce : ' || NEW.ann_titre || ' est terminée' ;
+  INSERT INTO notification(not_titre,not_message,not_util_id)
+  VALUES(v_titre,v_contenu,NEW.ann_util_id);
+  
+  INSERT INTO public.archive_annonce(
+  idannonce, idpropriétaire, description, datedebut, datefin, nbrmaxpersonne, nbrplacesdisponibles)
+  VALUES (v_idAnnonce, NEW.ann_util_id, NEW.ann_description, NEW.ann_datedebut, NEW.ann_datefin , NEW.ann_nbrmaxpersonnes , NEW.ann_nbrplacesdisponibles);
+  
+  DELETE FROM public.annonce
+  WHERE annonce.ann_id = v_idAnnonce;
+  
+  return null;
+  END;
+$BODY$;
+
+
+
+
+--*******************
 -- Ajout des triggers
-
+--*******************
 CREATE TRIGGER etat_annonce_annule
   AFTER UPDATE on annonce
   FOR EACH ROW
@@ -1011,3 +1064,8 @@ CREATE TRIGGER etat_annonce_annule
   When (new.ann_etat = 'Terminée')
   Execute procedure repeat_annonce();
 
+ CREATE TRIGGER etat_annonce_termine_archivage
+  AFTER UPDATE on annonce
+  FOR EACH ROW
+  When (new.ann_etat = 'Terminée')
+  Execute procedure archivage()
