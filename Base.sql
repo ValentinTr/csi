@@ -373,6 +373,9 @@ AS $BODY$
     v_contenu text;
         inscription record; 
     BEGIN
+    IF (v_idproprio = v_idcible)then
+      RAISE EXCEPTION 'Tu ne peut pas te bannir ! ';
+    ENd if;
         FOR inscription IN (Select * from repondre,annonce where repondre.rep_ann_id = annonce.ann_id 
               and annonce.ann_util_id = v_idproprio
               and repondre.rep_util_id = v_idcible)
@@ -392,6 +395,9 @@ $BODY$;
 
 ALTER FUNCTION public.bannir_personne(integer, integer)
     OWNER TO postgres;
+
+
+
 
 
 --*********************************************************************
@@ -851,8 +857,8 @@ BEGIN
   Insert into repondre (rep_ann_id,rep_util_id,rep_date,rep_statut,rep_message,rep_alerte) values (idAnnonce, idUser,now(),'non traitée',mess,alerte);
   
   
-        v_resultCreation := (SELECT getdispo(v_user, v_idAnnonce));
-        v_result[ 1 ] := v_idannonce;
+        v_resultCreation := (SELECT getdispo(iduser, idannonce));
+        v_result[ 1 ] := idannonce;
         v_result[ 2 ] := v_resultCreation;
 
         Return v_result;
@@ -1044,7 +1050,7 @@ AS $BODY$
   
     v_titreAnnonce := (Select ann_titre from annonce where annonce.ann_id = v_idAnnonce);
     v_iduserprop := (Select ann_util_id from annonce where annonce.ann_id = v_idAnnonce);
-  If v_iduser != v_iduserprop then
+  if v_iduser != v_iduserprop then
     return false;
   End if;
     v_titre := 'Annonce bien annulée ';
@@ -1201,18 +1207,6 @@ $BODY$;
 
 ALTER FUNCTION public.create_categorie(character)
     OWNER TO postgres;
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 --*******************
