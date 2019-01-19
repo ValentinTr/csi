@@ -794,25 +794,41 @@ ALTER FUNCTION public.repeat_annonce()
     OWNER TO postgres;
 
 
---*********************************************************************
---******************************inscription_annonce********************
---*********************************************************************
+-- FUNCTION: public.inscription_annonce(integer, integer, character, boolean)
 
- CREATE OR REPLACE FUNCTION inscription_annonce(idUser integer, idAnnonce integer, mess character, alerte boolean) RETURNS void as $$
+-- DROP FUNCTION public.inscription_annonce(integer, integer, character, boolean);
+
+CREATE OR REPLACE FUNCTION public.inscription_annonce(
+  iduser integer,
+  idannonce integer,
+  mess character,
+  alerte boolean)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE 
+AS $BODY$
+
 DECLARE
     v_dispo integer;
   
 BEGIN
   v_dispo := (Select getDispo(idUser,idAnnonce)  ) ;
   If v_dispo != 0 then
-    Insert into repondre (rep_ann_id,rep_util_id,rep_date_,rep_statut,rep_message,rep_alerte) values (idAnnonce, idUser,now(),'conflit',mess,alerte);
+    Insert into repondre (rep_ann_id,rep_util_id,rep_date,rep_statut,rep_message,rep_alerte) values (idAnnonce, idUser,now(),'conflit',mess,alerte);
     RAISE EXCEPTION 'Temporel';
   End if;
   
-  Insert into repondre (rep_ann_id,rep_util_id,rep_date_,rep_statut,rep_message,rep_alerte) values (idAnnonce, idUser,now(),'non traitée',mess,alerte);
+  Insert into repondre (rep_ann_id,rep_util_id,rep_date,rep_statut,rep_message,rep_alerte) values (idAnnonce, idUser,now(),'non traitée',mess,alerte);
 END;
 
-$$ LANGUAGE plpgsql;
+$BODY$;
+
+ALTER FUNCTION public.inscription_annonce(integer, integer, character, boolean)
+    OWNER TO postgres;
+
+
+
 
 
 --*********************************************************************
@@ -832,6 +848,7 @@ DECLARE
     v_titre text;
   v_description text;
   annonce_cible record;
+  v_nbplacedispo integer;
 BEGIN
   IF ( (Select rep_ann_id from repondre where rep_ann_id = idannonce and rep_util_id = iduser) IS NULL )THEN
     Raise exception 'Inscription introuvable';
@@ -844,9 +861,14 @@ BEGIN
     
   DELETE FROM repondre
   where repondre.rep_util_id = iduser and repondre.rep_ann_id = idannonce; 
+  
+  v_nbplacedispo := annonce_cible.ann_nbrplacesdisponibles+1;
+  Update annonce
+  SET ann_nbrplacesdisponibles = v_nbplacedispo
+  WHERE ann_id = idannonce;
 END;
 
-$BODY$;
+$BODY$;;
 --*********************************************************************
 --******************************Refuser_inscription********************
 --*********************************************************************
