@@ -266,7 +266,7 @@ ALTER FUNCTION public.acceptation_reponse(integer, integer)
 
 -- DROP FUNCTION public.notifier_tout_inscrit();
 
-CREATE FUNCTION public.notifier_tout_inscrit()
+CREATE OR REPLACE FUNCTION public.notifier_tout_inscrit()
     RETURNS trigger
     LANGUAGE 'plpgsql'
     COST 100
@@ -277,15 +277,15 @@ AS $BODY$
   inscrits record;
   v_titre text;
   v_contenu text;
-  ann_id integer;
+  v_ann_id integer;
     BEGIN
-    ann_id := NEW.ann_id;
-    FOR inscrits IN (Select * from repondre where repondre.rep_ann_id= ann_id)
+    v_ann_id := NEW.ann_id;
+    FOR inscrits IN (Select * from repondre where repondre.rep_ann_id= v_ann_id)
   LOOP
-    v_titre := 'Suppression de l’annonce ' || ANN_id ;
+    v_titre := 'Suppression de l’annonce ' || v_ann_id ;
     v_contenu := ' L’annonce à été supprimé par le propriétaire ' ;
   
-    INSERT INTO notification(not_id,not_titre,not_message)
+    INSERT INTO notification(not_util_id,not_titre,not_message)
     VALUES(inscrits.rep_util_id,v_titre,v_contenu);
     
     
@@ -294,13 +294,13 @@ AS $BODY$
   END LOOP;
   
   DELETE FROM repondre
-  WHERE repondre.rep_ann_id = ann_id;
+  WHERE repondre.rep_ann_id = v_ann_id;
   
   DELETE FROM annonce
-  WHERE annonce.ann_id = ann_id;
+  WHERE annonce.ann_id = v_ann_id;
   
   DELETE FROM commentaire
-  WHERE commentaire.com_ann_id = ann_id;
+  WHERE commentaire.com_ann_id = v_ann_id;
     
   Return null;
     END;
@@ -309,6 +309,9 @@ $BODY$;
 
 ALTER FUNCTION public.notifier_tout_inscrit()
     OWNER TO postgres;
+
+
+
 
 
 
@@ -935,7 +938,41 @@ $BODY$;
 ALTER FUNCTION public.create_annonce(character, character, timestamp without time zone, timestamp without time zone, timestamp without time zone, integer, boolean, repet, integer, character)
     OWNER TO postgres;
 
+--*********************************************************************
+--******************************annuler_annonce************************
+--*********************************************************************
 
+
+CREATE OR REPLACE FUNCTION public.annuler_annonce(v_idAnnonce integer)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE 
+AS $BODY$
+
+    DECLARE
+    v_titre text;
+    v_contenu text;
+    v_titreAnnonce text;
+    v_iduser integer;
+    BEGIN
+    v_titreAnnonce := (Select ann_titre from annonce where annonce.ann_id = v_idAnnonce);
+    v_iduser := (Select ann_util_id from annonce where annonce.ann_id = v_idAnnonce);
+    v_titre := 'Annonce bien annulée ';
+    v_contenu := ' Votre annonce :  ' || v_titreAnnonce || ' est bien annulée' ;
+  
+    INSERT INTO notification(not_titre,not_message,not_util_id)
+    VALUES(v_titre,v_contenu,v_iduser);
+  
+    UPDATE annonce
+    Set ann_etat = 'Annulée'
+      Where ann_id = v_idAnnonce;       
+    END;
+
+$BODY$;
+
+
+--****************************************************************************************
 
 -- Ajout des triggers
 
