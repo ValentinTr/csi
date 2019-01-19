@@ -1,4 +1,4 @@
-drop table if exists Categorie CASCADE;
+﻿drop table if exists Categorie CASCADE;
 drop table if exists compte    CASCADE;
 drop table if exists filiere   CASCADE;
 drop table if exists promotion CASCADE;
@@ -232,8 +232,9 @@ Insert into repondre(rep_ann_id,rep_util_id,rep_date, REP_statut, REP_message,RE
 -- DROP FUNCTION public.acceptation_reponse(integer, integer);
 
 CREATE OR REPLACE FUNCTION public.acceptation_reponse(
-  v_user integer,
-  v_annonce integer)
+  v_user_inscrit integer,
+  v_annonce integer,
+  v_user_proprietaire integer)
     RETURNS integer
     LANGUAGE 'plpgsql'
     COST 100
@@ -245,8 +246,13 @@ DECLARE
     v_annonceRecord RECORD;
   v_idUser integer;
   v_idAnnonce integer;
+  v_iduserprop integer;
 BEGIN
-
+  -- verifie si c'est bien le propriétaire de l'annonce
+      v_iduserprop := (Select ann_util_id from annonce where annonce.ann_id = v_annonce);
+      If v_iduser_proprietaire != v_iduserprop then
+        return -1;
+      End if;
   -- test si le destinataire du message existe
   v_idUser := (SELECT util_id FROM utilisateur WHERE utilisateur.util_id = v_user);
     
@@ -256,6 +262,8 @@ BEGIN
     IF (v_idUser IS NULL) OR (v_idAnnonce IS NULL) THEN
      return -1;
     END IF;
+  
+  
     
     -- On récupère la réponse
   SELECT INTO v_reponseRecord * FROM repondre WHERE rep_ann_id = v_annonce AND rep_util_id = v_user;
@@ -282,6 +290,9 @@ $BODY$;
 
 ALTER FUNCTION public.acceptation_reponse(integer, integer)
     OWNER TO postgres;
+
+
+
 
 
 --*********************************************************************
@@ -827,30 +838,31 @@ CREATE OR REPLACE FUNCTION public.inscription_annonce(
   idannonce integer,
   mess character,
   alerte boolean)
-    RETURNS void
+    RETURNS integer[]
     LANGUAGE 'plpgsql'
     COST 100
     VOLATILE 
 AS $BODY$
 
 DECLARE
-    v_dispo integer;
+  v_resultCreation integer;
+  v_result integer[];
   
 BEGIN
-  v_dispo := (Select getDispo(idUser,idAnnonce)  ) ;
   Insert into repondre (rep_ann_id,rep_util_id,rep_date,rep_statut,rep_message,rep_alerte) values (idAnnonce, idUser,now(),'non traitée',mess,alerte);
   
-    If v_dispo != 0 then
-      RAISE NOTICE 'Temporel';
-    End if;
+  
+        v_resultCreation := (SELECT getdispo(v_user, v_idAnnonce));
+        v_result[ 1 ] := v_idannonce;
+        v_result[ 2 ] := v_resultCreation;
 
+        Return v_result;
 END;
 
 $BODY$;
 
 ALTER FUNCTION public.inscription_annonce(integer, integer, character, boolean)
     OWNER TO postgres;
-
 
 
 
@@ -916,21 +928,29 @@ ALTER FUNCTION public.annuler_inscription(integer, integer)
 --*********************************************************************
 CREATE OR REPLACE FUNCTION public.refuser_inscription(
   iduser integer,
-  idannonce integer)
-    RETURNS void
+  idannonce integer,
+  id_proprio integer)
+    RETURNS integer
     LANGUAGE 'plpgsql'
     COST 100
     VOLATILE 
 AS $BODY$
 
 DECLARE
-    v_titre text;
+  v_titre text;
   v_description text;
   annonce_cible record;
+  v_idprop integer;
 BEGIN
-  IF ( (Select rep_ann_id from repondre where rep_ann_id = idannonce and rep_util_id = iduser) IS NULL )THEN
-    Raise exception 'Inscription introuvable';
+  -- verifie si c'est bien le propriétaire de l'annonce
+  v_idprop:= (Select ann_util_id from annonce where annonce.ann_id = idannonce);
+  If v_idprop != v_proprio then
+    return -1;
   End if;
+  IF ( (Select rep_ann_id from repondre where rep_ann_id = idannonce and rep_util_id = iduser) IS NULL )THEN
+    return -1;
+  End if;
+  
   Select into annonce_cible * from annonce where annonce.ann_id = idannonce;
   v_titre := 'Inscription refusé';
   v_description := 'Votre inscription à l''annonce ' || annonce_cible.ann_titre || ' est refusée.';
@@ -939,6 +959,8 @@ BEGIN
     
   DELETE FROM repondre
   where repondre.rep_util_id = iduser and repondre.rep_ann_id = idannonce; 
+  
+  return 0;
 END;
 
 $BODY$;
@@ -1007,8 +1029,8 @@ ALTER FUNCTION public.create_annonce(character, character, timestamp without tim
 --*********************************************************************
 
 
-CREATE OR REPLACE FUNCTION public.annuler_annonce(v_idAnnonce integer)
-    RETURNS void
+CREATE OR REPLACE FUNCTION public.annuler_annonce(v_iduser integer, v_idAnnonce integer)
+    RETURNS boolean
     LANGUAGE 'plpgsql'
     COST 100
     VOLATILE 
@@ -1018,10 +1040,14 @@ AS $BODY$
     v_titre text;
     v_contenu text;
     v_titreAnnonce text;
-    v_iduser integer;
+    v_iduserprop integer;
     BEGIN
+  
     v_titreAnnonce := (Select ann_titre from annonce where annonce.ann_id = v_idAnnonce);
-    v_iduser := (Select ann_util_id from annonce where annonce.ann_id = v_idAnnonce);
+    v_iduserprop := (Select ann_util_id from annonce where annonce.ann_id = v_idAnnonce);
+  If v_iduser != v_iduserprop then
+    return false;
+  End if;
     v_titre := 'Annonce bien annulée ';
     v_contenu := ' Votre annonce :  ' || v_titreAnnonce || ' est bien annulée' ;
   
@@ -1030,9 +1056,12 @@ AS $BODY$
   
     UPDATE annonce
     Set ann_etat = 'Annulée'
-      Where ann_id = v_idAnnonce;       
+      Where ann_id = v_idAnnonce;  
+    
+   return true;
     END;
-
+  
+  
 $BODY$;
 
 
@@ -1173,16 +1202,6 @@ $BODY$;
 
 ALTER FUNCTION public.create_categorie(character)
     OWNER TO postgres;
-
-
-
-
-
-
-
-
-
-
 
 
 
