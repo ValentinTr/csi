@@ -24,7 +24,7 @@ CREATE TYPE lib AS ENUM ('MIAGE', 'SC', 'TAL', 'MIASHS');
 CREATE TYPE promo AS ENUM ('L1', 'L2', 'L3', 'M1', 'M2');
 CREATE TYPE enum_role AS ENUM('Utilisateur' , 'Administrateur');
 CREATE TYPE repet AS ENUM('Aucune' , 'Jour' , 'Semaine' , 'Mois');
-CREATE TYPE etat AS ENUM('Annulée' , 'etat_annonce_termineminée' , 'En cours');
+CREATE TYPE etat AS ENUM('Annulée' , 'Terminée' , 'En cours');
 CREATE TYPE statut AS ENUM('non traitée' , 'en attente' , 'acceptée' , 'refusée');
 
 
