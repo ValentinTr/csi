@@ -579,8 +579,6 @@ ALTER FUNCTION public.create_user(character, character, character, character, ch
 
 
 
-
-
 --*********************************************************************
 --******************************create_categorie***********************
 --*********************************************************************
@@ -1068,4 +1066,4 @@ CREATE TRIGGER etat_annonce_annule
   AFTER UPDATE on annonce
   FOR EACH ROW
   When (new.ann_etat = 'Terminée')
-  Execute procedure archivage()
+  Execute procedure archivage();
