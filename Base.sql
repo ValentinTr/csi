@@ -1,4 +1,4 @@
-﻿drop table if exists Categorie CASCADE;
+drop table if exists Categorie CASCADE;
 drop table if exists compte    CASCADE;
 drop table if exists filiere   CASCADE;
 drop table if exists promotion CASCADE;
@@ -838,12 +838,12 @@ DECLARE
   
 BEGIN
   v_dispo := (Select getDispo(idUser,idAnnonce)  ) ;
-  If v_dispo != 0 then
-    Insert into repondre (rep_ann_id,rep_util_id,rep_date,rep_statut,rep_message,rep_alerte) values (idAnnonce, idUser,now(),'conflit',mess,alerte);
-    RAISE EXCEPTION 'Temporel';
-  End if;
-  
   Insert into repondre (rep_ann_id,rep_util_id,rep_date,rep_statut,rep_message,rep_alerte) values (idAnnonce, idUser,now(),'non traitée',mess,alerte);
+  
+    If v_dispo != 0 then
+      RAISE NOTICE 'Temporel';
+    End if;
+
 END;
 
 $BODY$;
@@ -855,9 +855,16 @@ ALTER FUNCTION public.inscription_annonce(integer, integer, character, boolean)
 
 
 
+
+
+
 --*********************************************************************
 --******************************annuler_inscription********************
 --*********************************************************************
+
+-- FUNCTION: public.annuler_inscription(integer, integer)
+
+-- DROP FUNCTION public.annuler_inscription(integer, integer);
 
 CREATE OR REPLACE FUNCTION public.annuler_inscription(
   iduser integer,
@@ -873,6 +880,7 @@ DECLARE
   v_description text;
   annonce_cible record;
   v_nbplacedispo integer;
+  v_statut_inscrit statut;
 BEGIN
   IF ( (Select rep_ann_id from repondre where rep_ann_id = idannonce and rep_util_id = iduser) IS NULL )THEN
     Raise exception 'Inscription introuvable';
@@ -882,7 +890,7 @@ BEGIN
   v_description := 'Votre inscription à l''annonce ' || annonce_cible.ann_titre || ' est annulée.';
   INSERT INTO notification(not_util_id,not_titre,not_message)
     VALUES(iduser,v_titre,v_description);
-    
+ v_statut_inscrit := (Select rep_statut from repondre where rep_ann_id = idannonce and rep_util_id = iduser);
   DELETE FROM repondre
   where repondre.rep_util_id = iduser and repondre.rep_ann_id = idannonce; 
   
@@ -890,9 +898,19 @@ BEGIN
   Update annonce
   SET ann_nbrplacesdisponibles = v_nbplacedispo
   WHERE ann_id = idannonce;
+  
+  If v_statut_inscrit = 'acceptée' then
+    perform inscription_acceptee_annulee(idannonce);
+  End if;
 END;
 
-$BODY$;;
+$BODY$;
+
+ALTER FUNCTION public.annuler_inscription(integer, integer)
+    OWNER TO postgres;
+
+
+
 --*********************************************************************
 --******************************Refuser_inscription********************
 --*********************************************************************
@@ -1068,6 +1086,103 @@ AS $BODY$
   return null;
   END;
 $BODY$;
+
+--*********************************************************************
+--******************************inscription_acceptee_annulee***********
+--*********************************************************************
+
+
+CREATE OR REPLACE FUNCTION public.inscription_acceptee_annulee(v_idAnnonce integer)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE 
+AS $BODY$
+
+    DECLARE
+  placedispo integer;
+  nbenfile integer;
+  premierattente integer;
+    BEGIN
+
+    placedispo := (Select ann_nbrplacesdisponibles from annonce where ann_id = v_idAnnonce );
+    nbenfile := (Select count(rep_util_id) from repondre where rep_ann_id = v_idAnnonce and rep_statut = 'en attente');
+  If placedispo = 1 then
+    If nbenfile = 0 then
+      Raise notice 'personne en file';
+    else
+      premierattente := (Select rep_util_id from repondre  where rep_ann_id = v_idAnnonce  and rep_statut = 'en attente' order by rep_date ASC LIMIT 1 );
+      
+      Update repondre
+      set rep_statut = 'acceptée'
+      Where rep_util_id = premierattente
+      and rep_ann_id = v_idAnnonce;
+      
+      update annonce
+      set ann_nbrplacesdisponibles = placedispo-1
+      where ann_id = v_idAnnonce;
+    END IF;
+  END IF;
+    END;
+
+$BODY$;
+
+ALTER FUNCTION public.create_categorie(character)
+    OWNER TO postgres;
+
+
+
+-- FUNCTION: public.create_categorie(character)
+
+-- DROP FUNCTION public.create_categorie(character);
+
+CREATE OR REPLACE FUNCTION public.inscription_acceptee_annulee(v_idAnnonce integer)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE 
+AS $BODY$
+
+    DECLARE
+  placedispo integer;
+  nbenfile integer;
+  premierattente integer;
+    BEGIN
+
+    placedispo := (Select ann_nbrplacesdisponibles from annonce where ann_id = v_idAnnonce );
+    nbenfile := (Select count(rep_util_id) from repondre where rep_ann_id = v_idAnnonce and rep_statut = 'en attente');
+  If placedispo = 1 then
+    If nbenfile = 0 then
+      Raise notice 'personne en file';
+    else
+      premierattente := (Select rep_util_id from repondre  where rep_ann_id = v_idAnnonce  and rep_statut = 'en attente' order by rep_date ASC LIMIT 1 );
+      
+      Update repondre
+      set rep_statut = 'acceptée'
+      Where rep_util_id = premierattente
+      and rep_ann_id = v_idAnnonce;
+      
+      update annonce
+      set ann_nbrplacesdisponibles = placedispo-1
+      where ann_id = v_idAnnonce;
+    END IF;
+  END IF;
+    END;
+
+$BODY$;
+
+ALTER FUNCTION public.create_categorie(character)
+    OWNER TO postgres;
+
+
+
+
+
+
+
+
+
+
 
 
 
