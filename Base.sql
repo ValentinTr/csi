@@ -8,6 +8,7 @@ drop table if exists utilisateur   CASCADE;
 drop table if exists notification  CASCADE;
 drop table if exists annonce   CASCADE;
 drop table if exists repondre  CASCADE;
+drop table if exists bannir  CASCADE;
 drop table if exists archive_annonce   CASCADE;
 drop table if exists archive_repondre  CASCADE;
 
@@ -76,6 +77,31 @@ CREATE TABLE Utilisateur
     CONSTRAINT ROLid FOREIGN KEY (UTIL_ROL_id) REFERENCES roles(rol_id)
 );
 
+-- Table: public.bannir
+
+-- DROP TABLE public.bannir;
+
+CREATE TABLE public.bannir
+(
+    ban_util_id integer NOT NULL,
+    ban_util_idbanni integer NOT NULL,
+    CONSTRAINT pdoubleid PRIMARY KEY (ban_util_id, ban_util_idbanni),
+    CONSTRAINT fid FOREIGN KEY (ban_util_id)
+        REFERENCES public.utilisateur (util_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT fidban FOREIGN KEY (ban_util_idbanni)
+        REFERENCES public.utilisateur (util_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public.bannir
+    OWNER to postgres;
 CREATE TABLE Notification
 (
     NOT_id SERIAL NOT NULL,
