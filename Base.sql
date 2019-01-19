@@ -876,6 +876,66 @@ END;
 
 $BODY$;
 
+--*********************************************************************
+--******************************create_annonce*********************
+--*********************************************************************
+
+ -- FUNCTION: public.create_annonce(character, character, timestamp without time zone, timestamp without time zone, timestamp without time zone, integer, boolean, repet, integer, character)
+
+-- DROP FUNCTION public.create_annonce(character, character, timestamp without time zone, timestamp without time zone, timestamp without time zone, integer, boolean, repet, integer, character);
+
+CREATE OR REPLACE FUNCTION public.create_annonce(
+  v_titre character,
+  v_description character,
+  v_debut timestamp without time zone,
+  v_fin timestamp without time zone,
+  v_limiterep timestamp without time zone,
+  v_nbrmaxpersonne integer,
+  v_visible boolean,
+  v_repetition repet,
+  v_user integer,
+  v_categorie character)
+    RETURNS integer[]
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE 
+AS $BODY$
+
+    DECLARE
+        v_idCategorie integer;
+        v_idCreateur integer;
+        v_idAnnonce integer;
+        v_resultCreation integer;
+        v_result integer[];
+    BEGIN
+        -- test si le créateur de l'annonce existe
+        v_idCreateur := (SELECT util_id FROM utilisateur WHERE utilisateur.util_id = v_user);
+        IF ( v_idCreateur IS NULL) THEN
+            RAISE EXCEPTION 'Le créateur n''existe pas';
+        END IF;
+
+        -- test si la catégorie de l'annonce existe
+        v_idCategorie := (SELECT create_categorie(v_categorie));
+        -- insertion de l'annonce dans la base
+        Insert into annonce (ann_titre, ann_description, ann_datedebut, ann_datefin, ann_datelimitereponse, ann_nbrmaxpersonnes, ann_nbrplacesdisponibles, ann_visiblepublic, ann_repetition, ann_etat, ann_util_id, ann_cat_id)
+        values (v_titre, v_description, v_debut, v_fin, v_limiteRep, v_nbrMaxPersonne, v_nbrMaxPersonne, v_visible, v_repetition, 'En cours', v_user, v_idCategorie);
+
+        v_idAnnonce := (SELECT MAX(ann_id) FROM annonce WHERE ann_description = v_description AND ann_datedebut = v_debut AND ann_util_id = v_user);
+
+        v_resultCreation := (SELECT getdispo(v_user, v_idAnnonce));
+
+        v_result[ 1 ] := v_idAnnonce;
+        v_result[ 2 ] := v_resultCreation;
+
+        Return v_result;
+    END;
+
+$BODY$;
+
+ALTER FUNCTION public.create_annonce(character, character, timestamp without time zone, timestamp without time zone, timestamp without time zone, integer, boolean, repet, integer, character)
+    OWNER TO postgres;
+
+
 
 -- Ajout des triggers
 
