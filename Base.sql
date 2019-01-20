@@ -1166,47 +1166,74 @@ ALTER FUNCTION public.create_categorie(character)
 
 
 
--- FUNCTION: public.create_categorie(character)
 
--- DROP FUNCTION public.create_categorie(character);
 
-CREATE OR REPLACE FUNCTION public.inscription_acceptee_annulee(v_idAnnonce integer)
-    RETURNS void
+
+--*********************************************************************
+--******************************inscription_expire*********************
+--*********************************************************************
+
+
+CREATE OR REPLACE FUNCTION public.inscription_expire() RETURNS void LANGUAGE 'plpgsql'
+  COST 100
+  VOLATILE
+AS $BODY$
+ Declare 
+  non_traite record;
+  v_titre text;
+  v_contenu text;
+  v_nomannonce text;
+Begin
+      For non_traite IN (Select * from repondre where rep_statut = 'non traitée')
+  LOOP 
+    raise notice 'Value: %', non_traite.rep_date + interval '2 day';
+    if ( (non_traite.rep_date + interval '2 day') < clock_timestamp() ) then
+      raise notice 'lol';
+      v_nomannonce := (Select ann_titre from annonce where ann_id = non_traite.rep_ann_id);
+      v_titre := 'Votre inscription est expiré';
+      v_contenu := 'L''inscription à l''annonce : ' || v_titre || 'est expiré.';
+      INSERT INTO notification(not_util_id,not_titre,not_message)
+        VALUES(non_traite.rep_util_id,v_titre,v_contenu);
+      
+       DELETE FROM repondre
+        WHERE repondre.rep_util_id = non_traite.rep_util_id
+      and repondre.rep_ann_id = non_traite.rep_util_id;
+    End if;
+  END LOOP;
+END;
+
+$BODY$;
+
+
+--*********************************************************************
+--******************************getUserAvailableAnnonce****************
+--********************************************************************* 
+  
+CREATE OR REPLACE FUNCTION public.getUserAvailableAnnonces(iduser integer)
+    RETURNS setof annonce
     LANGUAGE 'plpgsql'
     COST 100
     VOLATILE 
 AS $BODY$
 
     DECLARE
-  placedispo integer;
-  nbenfile integer;
-  premierattente integer;
+  v_idpromo integer;
     BEGIN
+      v_idpromo := (Select util_pro_id from utilisateur where util_id = iduser);
+    
+    return query (Select * from annonce where ann_visiblepublic = true
+        and ann_id not in ( select ann_id from annonce,bannir where bannir.ban_util_id = annonce.ann_util_id
+                            and bannir.ban_util_idbanni = iduser)
+        UNION
 
-    placedispo := (Select ann_nbrplacesdisponibles from annonce where ann_id = v_idAnnonce );
-    nbenfile := (Select count(rep_util_id) from repondre where rep_ann_id = v_idAnnonce and rep_statut = 'en attente');
-  If placedispo = 1 then
-    If nbenfile = 0 then
-      Raise notice 'personne en file';
-    else
-      premierattente := (Select rep_util_id from repondre  where rep_ann_id = v_idAnnonce  and rep_statut = 'en attente' order by rep_date ASC LIMIT 1 );
-      
-      Update repondre
-      set rep_statut = 'acceptée'
-      Where rep_util_id = premierattente
-      and rep_ann_id = v_idAnnonce;
-      
-      update annonce
-      set ann_nbrplacesdisponibles = placedispo-1
-      where ann_id = v_idAnnonce;
-    END IF;
-  END IF;
+        Select * from annonce where ann_visiblepublic = false and ann_pro_id = v_idpromo
+        and ann_id not in (select ann_id from annonce,bannir where bannir.ban_util_id = annonce.ann_util_id
+                            and bannir.ban_util_idbanni = iduser));
     END;
 
 $BODY$;
 
-ALTER FUNCTION public.create_categorie(character)
-    OWNER TO postgres;
+
 
 
 --*******************
