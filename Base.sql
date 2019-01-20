@@ -19,6 +19,9 @@ drop type if exists repet;
 drop type if exists etat;
 drop type if exists statut;
 
+drop role if exists visiteur;
+drop role if exists utilisateur;
+drop role if exists administrateur;
 
 -- creation des types enum
 CREATE TYPE lib AS ENUM ('MIAGE', 'SC', 'TAL', 'MIASHS');
@@ -1257,3 +1260,25 @@ CREATE TRIGGER etat_annonce_annule
   FOR EACH ROW
   When (new.ann_etat = 'Terminée')
   Execute procedure archivage();
+
+-- Role
+-- Visiteur
+CREATE ROLE visiteur WITH
+LOGIN PASSWORD 'visrol';
+GRANT USAGE ON SCHEMA public TO visiteur;
+GRANT select,insert on compte,utilisateur to visiteur;
+GRANT select on filiere,promotion,roles to visiteur;
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA public
+    TO visiteur;
+
+--Utilisateur
+CREATE ROLE utilisateur WITH
+LOGIN PASSWORD 'utilrolpass';
+Grant select,insert,update,delete on utilisateur,bannir,commentaire,annonce to utilisateur;
+Grant select,insert,update on notification,repondre,compte to utilisateur;
+Grant select,insert on categorie to utilisateur;
+Grant select,insert on promotion,filiere,roles,archive_annonce,archive_repondre to utilisateur;
+
+--Admin
+
+CREATE ROLE administrateur WITH LOGIN PASSWORD 'adminrolpass' SUPERUSER ;
