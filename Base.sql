@@ -12,16 +12,16 @@ drop table if exists bannir  CASCADE;
 drop table if exists archive_annonce   CASCADE;
 drop table if exists archive_repondre  CASCADE;
 
-drop type if exists lib;
-drop type if exists promo;
-drop type if exists enum_role;
-drop type if exists repet;
-drop type if exists etat;
-drop type if exists statut;
+drop type if exists lib CASCADE;
+drop type if exists promo CASCADE;
+drop type if exists enum_role CASCADE;
+drop type if exists repet CASCADE;
+drop type if exists etat CASCADE;
+drop type if exists statut CASCADE;
 
-drop role if exists visiteur;
-drop role if exists utilisateur;
-drop role if exists administrateur;
+drop role visiteur;
+drop role utilisateur;
+drop role administrateur;
 
 -- creation des types enum
 CREATE TYPE lib AS ENUM ('MIAGE', 'SC', 'TAL', 'MIASHS');
@@ -154,7 +154,11 @@ CREATE TABLE Repondre
     REP_date timestamp NOT NULL,
     REP_statut statut NOT NULL,
     REP_message text NOT NULL,
-    REP_alerte boolean NOT NULL
+    REP_alerte boolean NOT NULL,
+    CONSTRAINT doubid PRIMARY KEY (REP_ANN_id,REP_UTIL_id),
+    CONSTRAINT repann FOREIGN KEY (REP_ANN_id) references Annonce(ANN_id),
+    CONSTRAINT reputil FOREIGN KEY (REP_UTIL_id) references Utilisateur(util_id)
+
 );
 
 CREATE TABLE Archive_annonce
@@ -220,7 +224,7 @@ Insert into annonce(ann_titre, ann_description,ann_dateDebut,ann_dateFin,ann_dat
 ('Randonnée','Allons dans les vosges cool ! ','16-01-2019','24-01-2019','23-01-2019',8,0,true,'Mois','En cours',3,1,4);
 
 Insert into repondre(rep_ann_id,rep_util_id,rep_date, REP_statut, REP_message,REP_alerte )   Values 
-    (1,4,now(),'non traitée','Je suis passionné de tetris !',true),
+    (1,3,now(),'non traitée','Je suis passionné de tetris !',true),
     (2,2,now(),'non traitée','Trop content, ouais les vosges',true);
 
 -- creation des fonctions
@@ -750,7 +754,7 @@ BEGIN
     
     SELECT INTO resInscription *
     FROM annonce, repondre
-    WHERE rep_ann_id=ann_id AND rep_util_id=idUSER AND rep_ann_id=idAnnonce AND rep_statut='acceptée'
+    WHERE rep_ann_id=ann_id AND rep_util_id=idUSER AND rep_ann_id=idAnnonce 
     AND (ann_datefin BETWEEN dateDeb AND dateFin OR ann_datedebut BETWEEN dateDeb AND dateFin);
     
     IF resInscription.rep_ann_id IS NOT NULL THEN
@@ -771,7 +775,7 @@ $$ LANGUAGE plpgsql;
 
 -- DROP FUNCTION public.repeat_annonce();
 
-CREATE FUNCTION public.repeat_annonce()
+CREATE OR REPLACE FUNCTION public.repeat_annonce()
     RETURNS trigger
     LANGUAGE 'plpgsql'
     COST 100
