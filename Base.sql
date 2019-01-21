@@ -1270,7 +1270,7 @@ CREATE TRIGGER etat_annonce_annule
 CREATE ROLE visiteur WITH
 LOGIN PASSWORD 'visrol';
 GRANT USAGE ON SCHEMA public TO visiteur;
-GRANT select,insert on compte,utilisateur to visiteur;
+GRANT select,insert,update on compte,utilisateur to visiteur;
 GRANT select on filiere,promotion,roles to visiteur;
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA public
     TO visiteur;
@@ -1282,6 +1282,8 @@ Grant select,insert,update,delete on utilisateur,bannir,commentaire,annonce to u
 Grant select,insert,update on notification,repondre,compte to utilisateur;
 Grant select,insert on categorie to utilisateur;
 Grant select,insert on promotion,filiere,roles,archive_annonce,archive_repondre to utilisateur;
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA public
+    TO visiteur;
 
 --Admin
 
