@@ -1283,7 +1283,7 @@ Grant select,insert,update on notification,repondre,compte to utilisateur;
 Grant select,insert on categorie to utilisateur;
 Grant select,insert on promotion,filiere,roles,archive_annonce,archive_repondre to utilisateur;
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA public
-    TO visiteur;
+    TO utilisateur;
 
 --Admin
 
