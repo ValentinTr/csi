@@ -1228,14 +1228,15 @@ AS $BODY$
     BEGIN
       v_idpromo := (Select util_pro_id from utilisateur where util_id = iduser);
     
-    return query (Select * from annonce where ann_visiblepublic = true
-        and ann_id not in ( select ann_id from annonce,bannir where bannir.ban_util_id = annonce.ann_util_id
-                            and bannir.ban_util_idbanni = iduser)
-        UNION
-
-        Select * from annonce where ann_visiblepublic = false and ann_pro_id = v_idpromo
-        and ann_id not in (select ann_id from annonce,bannir where bannir.ban_util_id = annonce.ann_util_id
-                            and bannir.ban_util_idbanni = iduser));
+    return query (
+      SELECT * FROM annonce WHERE ann_visiblepublic = true
+        AND ann_util_id NOT IN (SELECT ban_util_id FROM bannir WHERE ban_util_idbanni = iduser)
+      
+      UNION
+      
+      SELECT annonce.* FROM annonce, utilisateur WHERE ann_visiblepublic = false
+        AND annonce.ann_util_id = utilisateur.util_id AND v_idpromo = utilisateur.util_pro_id
+        AND ann_util_id not in (select ban_util_id from bannir where ban_util_idbanni = iduser));
     END;
 
 $BODY$;
