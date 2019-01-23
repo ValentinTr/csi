@@ -927,12 +927,14 @@ BEGIN
   DELETE FROM repondre
   where repondre.rep_util_id = iduser and repondre.rep_ann_id = idannonce; 
   
-  v_nbplacedispo := annonce_cible.ann_nbrplacesdisponibles+1;
-  Update annonce
-  SET ann_nbrplacesdisponibles = v_nbplacedispo
-  WHERE ann_id = idannonce;
+  
   
   If v_statut_inscrit = 'acceptée' then
+    v_nbplacedispo := annonce_cible.ann_nbrplacesdisponibles+1;
+    Update annonce
+    SET ann_nbrplacesdisponibles = v_nbplacedispo
+    WHERE ann_id = idannonce;
+
     perform inscription_acceptee_annulee(idannonce);
   End if;
 END;
@@ -1288,8 +1290,8 @@ GRANT USAGE ON ALL SEQUENCES IN SCHEMA public
 --Utilisateur
 CREATE ROLE utilisateur WITH
 LOGIN PASSWORD 'utilrolpass';
-Grant select,insert,update,delete on utilisateur,bannir,commentaire,annonce, repondre to utilisateur;
-Grant select,insert,update on notification,compte to utilisateur;
+Grant select,insert,update,delete on utilisateur,bannir,commentaire,annonce, repondre, notification to utilisateur;
+Grant select,insert,update on compte to utilisateur;
 Grant select,insert on categorie to utilisateur;
 Grant select,insert on promotion,filiere,roles,archive_annonce,archive_repondre to utilisateur;
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA public
