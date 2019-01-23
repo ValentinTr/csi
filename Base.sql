@@ -254,6 +254,8 @@ DECLARE
   v_idUser integer;
   v_idAnnonce integer;
   v_iduserprop integer;
+  v_titre text;
+  v_description text;
 BEGIN
   -- verifie si c'est bien le propriétaire de l'annonce
       v_iduserprop := (Select ann_util_id from annonce where annonce.ann_id = v_annonce);
@@ -289,6 +291,12 @@ BEGIN
     ELSE
      UPDATE repondre rep SET rep_statut = 'en attente' WHERE rep_ann_id = v_annonce AND rep_util_id = v_user_inscrit;
     END IF;
+
+
+    v_titre := 'Inscription acceptée';
+    v_description := 'Votre inscription à l''annonce ' || v_annonceRecord.ann_titre || ' est acceptée.';
+    INSERT INTO notification(not_util_id,not_titre,not_message)
+    VALUES(v_user_inscrit,v_titre,v_description);
     
     RETURN 0;
     
