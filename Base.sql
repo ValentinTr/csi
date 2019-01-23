@@ -957,11 +957,11 @@ DECLARE
 BEGIN
   -- verifie si c'est bien le propriétaire de l'annonce
   v_idprop:= (Select ann_util_id from annonce where annonce.ann_id = idannonce);
-  If v_idprop != v_proprio then
-    return -1;
+  If v_idprop != id_proprio then
+    RAISE Exception 'Seul le propriétaire peut refuser une inscription';
   End if;
   IF ( (Select rep_ann_id from repondre where rep_ann_id = idannonce and rep_util_id = iduser) IS NULL )THEN
-    return -1;
+    RAISE Exception 'Inscription introuvable';
   End if;
   
   Select into annonce_cible * from annonce where annonce.ann_id = idannonce;
