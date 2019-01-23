@@ -257,26 +257,27 @@ DECLARE
 BEGIN
   -- verifie si c'est bien le propriétaire de l'annonce
       v_iduserprop := (Select ann_util_id from annonce where annonce.ann_id = v_annonce);
-      If v_iduser_proprietaire != v_iduserprop then
-        return -1;
+      If v_user_proprietaire != v_iduserprop then
+        RAISE Exception 'Seul le propriétaire de l''annonce peut accepter une inscription';
       End if;
+
   -- test si le destinataire du message existe
-  v_idUser := (SELECT util_id FROM utilisateur WHERE utilisateur.util_id = v_user);
+  v_idUser := (SELECT util_id FROM utilisateur WHERE utilisateur.util_id = v_user_inscrit);
     
     -- Si l'annonce existe
   v_idAnnonce := (Select ann_id from annonce where annonce.ann_id = v_annonce);
      
     IF (v_idUser IS NULL) OR (v_idAnnonce IS NULL) THEN
-     return -1;
+     RAISE Exception 'Annonce ou utilisateur introuvable';
     END IF;
   
   
     
     -- On récupère la réponse
-  SELECT INTO v_reponseRecord * FROM repondre WHERE rep_ann_id = v_annonce AND rep_util_id = v_user;
+  SELECT INTO v_reponseRecord * FROM repondre WHERE rep_ann_id = v_annonce AND rep_util_id = v_user_inscrit;
     
     IF v_reponseRecord.rep_ann_id IS NULL THEN
-     return -2;
+     RAISE Exception 'Inscription introuvable';
     END IF;
     
   -- On récupère l'annonce associée
@@ -284,9 +285,9 @@ BEGIN
      
     IF v_annonceRecord.ann_nbrplacesdisponibles > 0 THEN
      UPDATE annonce ann SET ann_nbrplacesdisponibles = v_annonceRecord.ann_nbrplacesdisponibles - 1 WHERE ann.ann_id = v_annonceRecord.ann_id;
-     UPDATE repondre rep SET rep_statut = 'acceptée' WHERE rep_ann_id = v_annonce AND rep_util_id = v_user;
+     UPDATE repondre rep SET rep_statut = 'acceptée' WHERE rep_ann_id = v_annonce AND rep_util_id = v_user_inscrit;
     ELSE
-     UPDATE repondre rep SET rep_statut = 'en attente' WHERE rep_ann_id = v_annonce AND rep_util_id = v_user;
+     UPDATE repondre rep SET rep_statut = 'en attente' WHERE rep_ann_id = v_annonce AND rep_util_id = v_user_inscrit;
     END IF;
     
     RETURN 0;
