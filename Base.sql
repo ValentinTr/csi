@@ -1278,8 +1278,8 @@ GRANT USAGE ON ALL SEQUENCES IN SCHEMA public
 --Utilisateur
 CREATE ROLE utilisateur WITH
 LOGIN PASSWORD 'utilrolpass';
-Grant select,insert,update,delete on utilisateur,bannir,commentaire,annonce to utilisateur;
-Grant select,insert,update on notification,repondre,compte to utilisateur;
+Grant select,insert,update,delete on utilisateur,bannir,commentaire,annonce, repondre to utilisateur;
+Grant select,insert,update on notification,compte to utilisateur;
 Grant select,insert on categorie to utilisateur;
 Grant select,insert on promotion,filiere,roles,archive_annonce,archive_repondre to utilisateur;
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA public
